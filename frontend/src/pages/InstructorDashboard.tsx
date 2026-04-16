@@ -2,16 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Video, CalendarPlus, Radio, FileText, Users, Upload, PlayCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link } from '../components/Link';
-import { authApiRequest, YogaClass, BlogPost } from '../lib/api';
-
-type InstructorVideo = {
-  id: string;
-  title: string;
-  level: 'Beginner' | 'Intermediate' | 'Advanced';
-  file_name: string;
-  views: number;
-  created_at: string;
-};
+import { authApiRequest, YogaClass, BlogPost, ClassVideo } from '../lib/api';
 
 type Learner = {
   id: string;
@@ -33,7 +24,7 @@ export function InstructorDashboard() {
 
   const [videoTitle, setVideoTitle] = useState('');
   const [videoLevel, setVideoLevel] = useState<'Beginner' | 'Intermediate' | 'Advanced'>('Beginner');
-  const [videoFileName, setVideoFileName] = useState('');
+  const [videoFile, setVideoFile] = useState<File | null>(null);
 
   const [classes, setClasses] = useState<YogaClass[]>([]);
   const [newClassName, setNewClassName] = useState('');
@@ -47,7 +38,7 @@ export function InstructorDashboard() {
 
   const [learners, setLearners] = useState<Learner[]>([]);
 
-  const [videos, setVideos] = useState<InstructorVideo[]>([]);
+  const [videos, setVideos] = useState<ClassVideo[]>([]);
   const [videoSearch, setVideoSearch] = useState('');
 
   const [message, setMessage] = useState('');
@@ -65,7 +56,7 @@ export function InstructorDashboard() {
       setError('');
       const [classesData, videosData, learnersData, liveData] = await Promise.all([
         authApiRequest<YogaClass[]>('/classes'),
-        authApiRequest<InstructorVideo[]>('/instructor/videos'),
+        authApiRequest<ClassVideo[]>('/instructor/videos'),
         authApiRequest<Learner[]>('/instructor/learners'),
         authApiRequest<LiveStatus>('/instructor/live'),
       ]);
@@ -91,22 +82,27 @@ export function InstructorDashboard() {
   };
 
   const handleUploadVideo = async () => {
-    if (!videoTitle || !videoFileName) {
+    if (!videoTitle || !videoFile) {
       setError('Video title and file are required.');
       return;
     }
 
     try {
       setError('');
-      const created = await authApiRequest<InstructorVideo>('/instructor/videos', {
+      const formData = new FormData();
+      formData.append('title', videoTitle);
+      formData.append('level', videoLevel);
+      formData.append('video', videoFile);
+
+      const created = await authApiRequest<ClassVideo>('/instructor/videos', {
         method: 'POST',
-        body: JSON.stringify({ title: videoTitle, level: videoLevel, fileName: videoFileName }),
+        body: formData,
       });
       setVideos((prev) => [created, ...prev]);
       setVideoTitle('');
-      setVideoFileName('');
+      setVideoFile(null);
       setVideoLevel('Beginner');
-      showMessage('Video uploaded successfully.');
+      showMessage('Video uploaded successfully. It is now available in the Classes page.');
     } catch (err) {
       setError((err as Error).message || 'Failed to upload video.');
     }
@@ -229,7 +225,7 @@ export function InstructorDashboard() {
                 type="file"
                 accept="video/*"
                 className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                onChange={(e) => setVideoFileName(e.target.files?.[0]?.name || '')}
+                onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
               />
               <button onClick={handleUploadVideo} className="w-full bg-violet-600 text-white rounded-lg py-2 hover:bg-violet-700">Upload Video</button>
             </div>
@@ -336,10 +332,10 @@ export function InstructorDashboard() {
                   </div>
                   <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
                     <span>{video.views} views</span>
-                    <button className="inline-flex items-center text-violet-700 hover:text-violet-800">
+                    <a href={video.video_url} target="_blank" rel="noreferrer" className="inline-flex items-center text-violet-700 hover:text-violet-800">
                       <PlayCircle className="w-4 h-4 mr-1" />
                       Preview
-                    </button>
+                    </a>
                   </div>
                 </div>
               ))}

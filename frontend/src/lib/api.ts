@@ -23,6 +23,20 @@ export type YogaClass = {
   updated_at: string;
 };
 
+export type ClassVideo = {
+  id: string;
+  title: string;
+  level: 'Beginner' | 'Intermediate' | 'Advanced';
+  file_name: string;
+  video_url: string;
+  mime_type: string;
+  uploaded_by: string;
+  uploaded_by_name: string;
+  views: number;
+  created_at: string;
+  updated_at: string;
+};
+
 export type BlogPost = {
   id: string;
   title: string;
@@ -71,12 +85,13 @@ export type AuthUser = {
 };
 
 export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
       ...options,
       headers: {
-        'Content-Type': 'application/json',
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         ...(options.headers || {}),
       },
     });

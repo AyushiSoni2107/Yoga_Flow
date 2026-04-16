@@ -1,8 +1,32 @@
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { Link } from "../components/Link";
-import { AlertCircle, CheckCircle, Upload } from "lucide-react";
-import { supabase } from "../lib/supabase";
+import {
+  AlertCircle,
+  CheckCircle,
+  ShieldCheck,
+  Sparkles,
+  Upload,
+  UserRound,
+} from "lucide-react";
+
+const roleOptions = [
+  {
+    label: "Instructor",
+    value: "instructor",
+    icon: Sparkles,
+  },
+  {
+    label: "Practitioner",
+    value: "practitioner",
+    icon: UserRound,
+  },
+  {
+    label: "Admin",
+    value: "admin",
+    icon: ShieldCheck,
+  },
+] as const;
 
 export function Register() {
   const { signUp } = useAuth();
@@ -11,9 +35,8 @@ export function Register() {
     email: "",
     password: "",
     confirmPassword: "",
-    role: "",
+    role: "" as "" | "admin" | "instructor" | "practitioner",
   });
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -67,7 +90,7 @@ export function Register() {
     });
   };
 
-  const handleRoleSelect = (role: string) => {
+  const handleRoleSelect = (role: "admin" | "instructor" | "practitioner") => {
     setFormData({
       ...formData,
       role,
@@ -87,8 +110,6 @@ export function Register() {
         setError("File must be an image");
         return;
       }
-
-      setAvatarFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setAvatarPreview(reader.result as string);
@@ -110,23 +131,50 @@ export function Register() {
         </div>
 
         {/* Role selection boxes */}
-        <div className="flex justify-between mb-8">
-          {["Instructor", "Practitioner", "Admin"].map((role) => (
+        <div className="grid grid-cols-1 gap-3 mb-8 sm:grid-cols-3">
+          {roleOptions.map((role) => {
+            const isSelected = formData.role === role.value;
+            const Icon = role.icon;
+
+            return (
             <button
               type="button"
-              key={role}
-              onClick={() => handleRoleSelect(role.toLowerCase())}
-              className={`flex-1 mx-1 px-4 py-6 rounded-lg border-2 transition-all font-semibold text-lg shadow-sm
-                ${
-                  formData.role === role.toLowerCase()
-                    ? "border-violet-600 bg-violet-50 text-violet-700"
-                    : "border-gray-200 bg-gray-50 text-gray-700 hover:border-violet-400"
-                }
-              `}
+              key={role.value}
+              onClick={() => handleRoleSelect(role.value)}
+              className={`group relative overflow-hidden rounded-2xl border px-4 py-5 text-left transition-all duration-300 ${
+                isSelected
+                  ? "border-violet-500 bg-gradient-to-br from-violet-600 via-fuchsia-500 to-rose-400 text-white shadow-xl shadow-violet-200 scale-[1.02]"
+                  : "border-violet-100 bg-gradient-to-br from-white via-violet-50 to-rose-50 text-slate-700 shadow-sm hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-lg"
+              }`}
             >
-              {role}
+              <div
+                className={`absolute inset-0 opacity-80 transition-opacity ${
+                  isSelected
+                    ? "bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.28),_transparent_45%)]"
+                    : "bg-[radial-gradient(circle_at_top_right,_rgba(139,92,246,0.12),_transparent_48%)] group-hover:opacity-100"
+                }`}
+              />
+              <div className="relative">
+                <div
+                  className={`mb-4 inline-flex h-11 w-11 items-center justify-center rounded-2xl border ${
+                    isSelected
+                      ? "border-white/30 bg-white/15 text-white"
+                      : "border-violet-200 bg-white/80 text-violet-600"
+                  }`}
+                >
+                  <Icon className="h-5 w-5" />
+                </div>
+                <p
+                  className={`text-base font-semibold ${
+                    isSelected ? "text-white" : "text-slate-900"
+                  }`}
+                >
+                  {role.label}
+                </p>
+              </div>
             </button>
-          ))}
+            );
+          })}
         </div>
 
         {error && (

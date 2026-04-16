@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { apiRequest, YogaClass } from '../lib/api';
-import { Clock, Users } from 'lucide-react';
+import { apiRequest, YogaClass, ClassVideo } from '../lib/api';
+import { Clock, PlayCircle, Users } from 'lucide-react';
 
 export function Classes() {
   const [classes, setClasses] = useState<YogaClass[]>([]);
+  const [videos, setVideos] = useState<ClassVideo[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -12,8 +13,12 @@ export function Classes() {
 
   const fetchClasses = async () => {
     try {
-      const data = await apiRequest<YogaClass[]>('/classes');
-      setClasses(data || []);
+      const [classData, videoData] = await Promise.all([
+        apiRequest<YogaClass[]>('/classes'),
+        apiRequest<ClassVideo[]>('/classes/videos'),
+      ]);
+      setClasses(classData || []);
+      setVideos(videoData || []);
     } catch (error) {
       console.error('Error fetching classes:', error);
     } finally {
@@ -95,6 +100,57 @@ export function Classes() {
               </div>
             </div>
           ))}
+        </div>
+
+        <div className="mb-16">
+          <div className="mb-8 text-center">
+            <h2 className="text-3xl font-bold text-gray-900 mb-3">Recorded Class Videos</h2>
+            <p className="text-gray-600">Videos uploaded by instructors appear here automatically for members to watch.</p>
+          </div>
+
+          {videos.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-violet-200 bg-white p-10 text-center text-gray-500">
+              No class videos uploaded yet.
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-8">
+              {videos.map((video) => (
+                <div
+                  key={video.id}
+                  className="overflow-hidden rounded-2xl bg-white shadow-lg transition-shadow hover:shadow-xl"
+                >
+                  <div className="bg-gradient-to-r from-violet-600 to-fuchsia-500 px-6 py-4 text-white">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xl font-bold">{video.title}</h3>
+                      <span className={`rounded-full px-3 py-1 text-sm font-semibold ${getDifficultyColor(video.level)}`}>
+                        {video.level}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm text-white/85">Uploaded by {video.uploaded_by_name || 'Yoga Flow Instructor'}</p>
+                  </div>
+
+                  <div className="p-6">
+                    <video
+                      controls
+                      preload="metadata"
+                      className="mb-4 h-72 w-full rounded-xl bg-black object-cover"
+                      src={video.video_url}
+                    >
+                      Your browser does not support the video tag.
+                    </video>
+
+                    <div className="flex items-center justify-between text-sm text-gray-500">
+                      <span className="inline-flex items-center gap-2">
+                        <PlayCircle className="h-4 w-4" />
+                        Ready to watch
+                      </span>
+                      <span>{video.views} views</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="bg-white rounded-xl shadow-lg p-8">

@@ -3,6 +3,7 @@ const express = require('express');
 const auth = require('../middleware/auth');
 const requireInstructor = require('../middleware/requireInstructor');
 const YogaClass = require('../models/YogaClass');
+const InstructorVideo = require('../models/InstructorVideo');
 const { defaultClasses } = require('../utils/defaultData');
 const { toClient } = require('../utils/serialize');
 
@@ -19,6 +20,15 @@ router.get('/', async (_req, res) => {
     return res.json(classes.map(toClient));
   } catch (error) {
     return res.status(500).json({ message: error.message || 'Failed to fetch classes.' });
+  }
+});
+
+router.get('/videos', async (_req, res) => {
+  try {
+    const videos = await InstructorVideo.find({ status: 'active' }).sort({ createdAt: -1 });
+    return res.json(videos.map(toClient));
+  } catch (error) {
+    return res.status(500).json({ message: error.message || 'Failed to fetch class videos.' });
   }
 });
 

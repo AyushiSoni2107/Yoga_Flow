@@ -1,4 +1,7 @@
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
+const multer = require('multer');
 
 const auth = require('../middleware/auth');
 const requireInstructor = require('../middleware/requireInstructor');
@@ -9,6 +12,37 @@ const LearnerProgress = require('../models/LearnerProgress');
 const { toClient } = require('../utils/serialize');
 
 const router = express.Router();
+const videosDir = path.join(__dirname, '..', '..', 'uploads', 'videos');
+
+if (!fs.existsSync(videosDir)) {
+  fs.mkdirSync(videosDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, videosDir),
+  filename: (_req, file, cb) => {
+    const safeName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '-');
+    cb(null, `${Date.now()}-${safeName}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 200 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (!file.mimetype.startsWith('video/')) {
+      cb(new Error('Only video files are allowed.'));
+      return;
+    }
+    cb(null, true);
+  },
+});
+
+const buildMediaUrl = (req, relativePath) => {
+  const protocol = req.protocol;
+  const host = req.get('host');
+  return `${protocol}://${host}${relativePath}`;
+};
 
 router.get('/videos', auth, requireInstructor, async (req, res) => {
   try {
@@ -23,18 +57,21 @@ router.get('/videos', auth, requireInstructor, async (req, res) => {
   }
 });
 
-router.post('/videos', auth, requireInstructor, async (req, res) => {
+router.post('/videos', auth, requireInstructor, upload.single('video'), async (req, res) => {
   try {
-    const { title, level, fileName } = req.body;
-    if (!title || !fileName) {
-      return res.status(400).json({ message: 'title and fileName are required.' });
+    const { title, level } = req.body;
+    if (!title || !req.file) {
+      return res.status(400).json({ message: 'title and video file are required.' });
     }
 
     const created = await InstructorVideo.create({
       title,
       level: level || 'Beginner',
-      file_name: fileName,
+      file_name: req.file.originalname,
+      video_url: buildMediaUrl(req, `/uploads/videos/${req.file.filename}`),
+      mime_type: req.file.mimetype,
       uploaded_by: req.user._id.toString(),
+      uploaded_by_name: req.user.full_name || 'Yoga Flow Instructor',
       status: 'active',
     });
 
