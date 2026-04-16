@@ -1,43 +1,52 @@
-import { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { Link } from '../components/Link';
-import { AlertCircle, CheckCircle, Upload } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { useState } from "react";
+import { useAuth } from "../contexts/AuthContext";
+import { Link } from "../components/Link";
+import { AlertCircle, CheckCircle, Upload } from "lucide-react";
+import { supabase } from "../lib/supabase";
 
 export function Register() {
   const { signUp } = useAuth();
   const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
+    fullName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    role: "",
   });
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string>('');
+  const [avatarPreview, setAvatarPreview] = useState<string>("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    setError("");
     setSuccess(false);
 
+    if (!formData.role) {
+      setError("Please select a role: Instructor, Practitioner, or Admin");
+      setLoading(false);
+      return;
+    }
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      setError("Passwords do not match");
       setLoading(false);
       return;
     }
-
     if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long');
+      setError("Password must be at least 6 characters long");
       setLoading(false);
       return;
     }
-
-    const { error } = await signUp(formData.email, formData.password, formData.fullName);
-
+    // Pass role to signUp if your backend supports it, otherwise just include in formData
+    const { error } = await signUp(
+      formData.email,
+      formData.password,
+      formData.fullName,
+      formData.role,
+    );
     if (error) {
       setError(error.message);
       setLoading(false);
@@ -45,8 +54,8 @@ export function Register() {
       setSuccess(true);
       setLoading(false);
       setTimeout(() => {
-        window.history.pushState({}, '', '/');
-        window.dispatchEvent(new PopStateEvent('popstate'));
+        window.history.pushState({}, "", "/");
+        window.dispatchEvent(new PopStateEvent("popstate"));
       }, 2000);
     }
   };
@@ -58,16 +67,24 @@ export function Register() {
     });
   };
 
+  const handleRoleSelect = (role: string) => {
+    setFormData({
+      ...formData,
+      role,
+    });
+    setError("");
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        setError('File size must be less than 5MB');
+        setError("File size must be less than 5MB");
         return;
       }
 
-      if (!file.type.startsWith('image/')) {
-        setError('File must be an image');
+      if (!file.type.startsWith("image/")) {
+        setError("File must be an image");
         return;
       }
 
@@ -84,8 +101,32 @@ export function Register() {
     <div className="min-h-screen bg-gradient-to-b from-violet-50 to-white flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full bg-white rounded-xl shadow-2xl p-8">
         <div className="text-center mb-8">
-          <h2 className="text-4xl font-bold text-gray-900 mb-2">Join Yoga Flow</h2>
-          <p className="text-gray-600">Create your account and start your wellness journey</p>
+          <h2 className="text-4xl font-bold text-gray-900 mb-2">
+            Join Yoga Flow
+          </h2>
+          <p className="text-gray-600">
+            Create your account and start your wellness journey
+          </p>
+        </div>
+
+        {/* Role selection boxes */}
+        <div className="flex justify-between mb-8">
+          {["Instructor", "Practitioner", "Admin"].map((role) => (
+            <button
+              type="button"
+              key={role}
+              onClick={() => handleRoleSelect(role.toLowerCase())}
+              className={`flex-1 mx-1 px-4 py-6 rounded-lg border-2 transition-all font-semibold text-lg shadow-sm
+                ${
+                  formData.role === role.toLowerCase()
+                    ? "border-violet-600 bg-violet-50 text-violet-700"
+                    : "border-gray-200 bg-gray-50 text-gray-700 hover:border-violet-400"
+                }
+              `}
+            >
+              {role}
+            </button>
+          ))}
         </div>
 
         {error && (
@@ -98,7 +139,9 @@ export function Register() {
         {success && (
           <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center space-x-3">
             <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-            <p className="text-green-800 text-sm">Account created successfully! Redirecting...</p>
+            <p className="text-green-800 text-sm">
+              Account created successfully! Redirecting...
+            </p>
           </div>
         )}
 
@@ -135,7 +178,10 @@ export function Register() {
           </div>
 
           <div>
-            <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="fullName"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Full Name
             </label>
             <input
@@ -151,7 +197,10 @@ export function Register() {
           </div>
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Email Address
             </label>
             <input
@@ -167,7 +216,10 @@ export function Register() {
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Password
             </label>
             <input
@@ -184,7 +236,10 @@ export function Register() {
           </div>
 
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="confirmPassword"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Confirm Password
             </label>
             <input
@@ -204,14 +259,17 @@ export function Register() {
             disabled={loading}
             className="w-full bg-violet-600 text-white py-3 rounded-lg font-semibold hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Creating account...' : 'Create Account'}
+            {loading ? "Creating account..." : "Create Account"}
           </button>
         </form>
 
         <div className="mt-6 text-center">
           <p className="text-gray-600">
-            Already have an account?{' '}
-            <Link href="/login" className="text-violet-600 hover:text-violet-700 font-semibold">
+            Already have an account?{" "}
+            <Link
+              href="/login"
+              className="text-violet-600 hover:text-violet-700 font-semibold"
+            >
               Sign in
             </Link>
           </p>
